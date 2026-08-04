@@ -167,7 +167,7 @@ import Network
     self.mConnection?.forceCancel ()
     self.mConnection = nil
     self.mSendAliveToPeerTimer?.invalidate ()
-    self.mSendAliveToPeerTimer =  nil
+    self.mSendAliveToPeerTimer = nil
     self.mPeerIsAliveTimer?.invalidate ()
     self.mPeerIsAliveTimer = nil
     self.mReceivedRawData.removeAll ()
@@ -220,12 +220,14 @@ import Network
         }
         self.mConnectionState = .connected (remoteEndPointString)
         self.isConnected = true
-        self.mSendAliveToPeerTimer = Timer.scheduledTimer (withTimeInterval: 1.0, repeats: true) { _ in
+        let sendAliveToPeerTimer = Timer (timeInterval: 1.0, repeats: true) { _ in
           DispatchQueue.main.async { self.sendAliveMessage () }
         }
+        RunLoop.main.add (sendAliveToPeerTimer, forMode: .common)
+        self.mSendAliveToPeerTimer = sendAliveToPeerTimer
         self.mConnectionIsAlive = true
         self.mAliveMessageReceiveDate = DispatchTime.now ()
-        self.mPeerIsAliveTimer = Timer.scheduledTimer (withTimeInterval: 3.0, repeats: true) { _ in
+        let peerIsAliveTimer = Timer (timeInterval: 3.0, repeats: true) { _ in
           DispatchQueue.main.async {
             if !self.mConnectionIsAlive, (self.mAliveMessageReceiveDate + .seconds(2)) < DispatchTime.now () {
               self.mConnectionLost = true
@@ -234,6 +236,8 @@ import Network
             self.mConnectionIsAlive = false
           }
         }
+        RunLoop.main.add (peerIsAliveTimer, forMode: .common)
+        self.mPeerIsAliveTimer = peerIsAliveTimer
       case .failed (let error) :
         if self.mTrace {
           print ("Connection failed, error \(error)…")
