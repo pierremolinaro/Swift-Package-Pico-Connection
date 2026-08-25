@@ -7,7 +7,9 @@ import Network
 
 //--------------------------------------------------------------------------------------------------
 
-@Observable @MainActor public final class PicoConnection <SEND_CODE : WiFiSendCodeProtocol, RECEIVE_CODE : WiFiReceiveCodeProtocol> : NSObject, NetServiceBrowserDelegate, NetServiceDelegate {
+@Observable @MainActor public final class PicoConnection
+       <SEND_CODE : WiFiSendCodeProtocol, RECEIVE_CODE : WiFiReceiveCodeProtocol>
+       : NSObject, NetServiceBrowserDelegate, NetServiceDelegate {
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -139,7 +141,7 @@ import Network
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  private func openConnection (with inResult : NWBrowser.Result) {
+  @MainActor private func openConnection (with inResult : NWBrowser.Result) {
     if self.mTrace {
       print ("Open connection…")
     }
@@ -157,7 +159,7 @@ import Network
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  private func disconnect () {
+  @MainActor private func disconnect () {
     if self.mTrace {
       print ("Disconnect")
     }
@@ -176,7 +178,7 @@ import Network
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  func connectionLost (_ inError : NWError) {
+  @MainActor func connectionLost (_ inError : NWError) {
     if self.mTrace {
       print ("connectionLost with error \(inError)")
     }
