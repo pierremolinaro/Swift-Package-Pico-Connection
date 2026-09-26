@@ -97,7 +97,7 @@ import Network
   @Sendable nonisolated private
   func browseResultsChanged (newResults inNewResults : Set<NWBrowser.Result>,
                              changes inChanges : Set<NWBrowser.Result.Change>) {
-    DispatchQueue.main.async {
+    Task { @MainActor in
       for resultChange in inChanges {
         switch resultChange {
         case .changed (old: let ancienService, new: let nouveauService, flags: let flags) :
@@ -188,7 +188,7 @@ import Network
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   @Sendable private nonisolated func connectionStateDidChange (_ inState : NWConnection.State) {
-    DispatchQueue.main.async {
+    Task { @MainActor in
       switch inState {
       case .setup:
         if self.mTrace {
@@ -223,14 +223,14 @@ import Network
         self.mConnectionState = .connected (remoteEndPointString)
         self.isConnected = true
         let sendAliveToPeerTimer = Timer (timeInterval: 1.0, repeats: true) { _ in
-          DispatchQueue.main.async { self.sendAliveMessage () }
+          Task { @MainActor in self.sendAliveMessage () }
         }
         RunLoop.main.add (sendAliveToPeerTimer, forMode: .common)
         self.mSendAliveToPeerTimer = sendAliveToPeerTimer
         self.mConnectionIsAlive = true
         self.mAliveMessageReceiveDate = DispatchTime.now ()
         let peerIsAliveTimer = Timer (timeInterval: 3.0, repeats: true) { _ in
-          DispatchQueue.main.async {
+          Task { @MainActor in
             if !self.mConnectionIsAlive, (self.mAliveMessageReceiveDate + .seconds(2)) < DispatchTime.now () {
               self.mConnectionLost = true
               self.disconnect ()
@@ -262,7 +262,7 @@ import Network
 
   private func startReceive () {
     self.mConnection?.receive (minimumIncompleteLength: 1, maximumLength: 65536) { optData, _, isDone, optError in
-      DispatchQueue.main.async {
+      Task { @MainActor in
         if let data = optData, !data.isEmpty {
           self.mConnectionIsAlive = true
           self.mAliveMessageReceiveDate = DispatchTime.now ()
@@ -284,10 +284,10 @@ import Network
     var byte = 0xA1 // Alive Message
     let data = unsafe Data (bytes: &byte, count: 1)
     self.mConnection?.send (content: data, isComplete: true, completion: .contentProcessed { optError in
-      DispatchQueue.main.async { self.mSendingPublishedState = true }
+      Task { @MainActor in self.mSendingPublishedState = true }
       if let error = optError {
         print ("did send, error: \(error)")
-        DispatchQueue.main.async { self.connectionLost (error) }
+        Task { @MainActor in self.connectionLost (error) }
       }
     })
   }
@@ -298,10 +298,10 @@ import Network
     var byte = inCommand.rawValue | 0xC0
     let data = unsafe Data (bytes: &byte, count: 1)
     self.mConnection?.send (content: data, isComplete: true, completion: .contentProcessed { optError in
-      DispatchQueue.main.async { self.mSendingPublishedState = true }
+      Task { @MainActor in self.mSendingPublishedState = true }
       if let error = optError {
         print ("did send, error: \(error)")
-        DispatchQueue.main.async { self.connectionLost (error) }
+        Task { @MainActor in self.connectionLost (error) }
       }
     })
   }
@@ -317,10 +317,10 @@ import Network
       v >>= 7
     }
     self.mConnection?.send (content: data, isComplete: false, completion: .contentProcessed { optError in
-      DispatchQueue.main.async { self.mSendingPublishedState = true }
+      Task { @MainActor in self.mSendingPublishedState = true }
       if let error = optError {
         print ("did send, error: \(error)")
-        DispatchQueue.main.async { self.connectionLost (error) }
+        Task { @MainActor in self.connectionLost (error) }
       }
     })
   }
@@ -352,10 +352,10 @@ import Network
       }
     }
     self.mConnection?.send (content: data, isComplete: false, completion: .contentProcessed { optError in
-      DispatchQueue.main.async { self.mSendingPublishedState = true }
+      Task { @MainActor in self.mSendingPublishedState = true }
       if let error = optError {
         print ("did send, error: \(error)")
-        DispatchQueue.main.async { self.connectionLost (error) }
+        Task { @MainActor in self.connectionLost (error) }
       }
     })
   }
@@ -564,9 +564,7 @@ import Network
         self.closeCurrentValueDecoding ()
         if let receiveCode = RECEIVE_CODE (rawValue: byte & 0x3F) {
           let command = Command (code: receiveCode, parameters: self.mParameterStack)
-          DispatchQueue.main.async {
-            self.mCompletionCallBack? (command)
-          }
+          Task { @MainActor in self.mCompletionCallBack? (command) }
         }
         self.mParameterStack.removeAll ()
       case .undefined :
